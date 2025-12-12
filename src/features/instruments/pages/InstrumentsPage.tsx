@@ -10,16 +10,16 @@ import { Input } from "../../../components/ui/Input";
 // --- API Functions ---
 const fetchInstruments = async () => {
   // OJO: Aquí estoy hardcodeando el usuario 1. Luego pondremos Auth.
-  const { data } = await api.get("/topography/instruments/user/1"); 
+  const { data } = await api.get("/instruments/user/1"); 
   return data;
 };
 
 const createInstrument = async (data: any) => {
-  return api.post("/topography/instruments", { ...data, userId: 1 });
+  return api.post("/instruments", { ...data, userId: 1 });
 };
 
 const deleteInstrument = async (id: number) => {
-  return api.delete(`/topography/instruments/${id}`);
+  return api.delete(`/instruments/${id}`);
 };
 
 // --- Componente Principal ---
