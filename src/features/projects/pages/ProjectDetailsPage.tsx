@@ -3,14 +3,15 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   FiMap, FiList, FiTarget, FiPlus, FiTrash2, 
-  FiDownload, FiLayers, FiArrowLeft, FiActivity, FiBook, FiRefreshCw, FiBox, FiUploadCloud 
+  FiDownload, FiLayers, FiArrowLeft, FiBook, FiRefreshCw, FiBox, FiUploadCloud 
 } from "react-icons/fi";
-
+// Asegúrate de importar FiActivity para el icono
+import { FiActivity } from "react-icons/fi";
 // APIs
 import { fetchPoints, createPoint, deletePoint, fetchProjectById } from "../../topography/api/points";
 import { fetchStations, createStation, createObservation } from "../../topography/api/stations";
 import { fetchLevelingRuns, createLevelingRun, addLevelingReading } from "../../topography/api/leveling";
-import { fetchSurfaces, createSurface, addPointsToSurface } from "../../topography/api/surfaces"; 
+import { fetchSurfaces, createSurface, addPointsToSurface ,calculateVolume} from "../../topography/api/surfaces"; 
 import { api } from "../../../libs/axios"; 
 
 import { Button } from "../../../components/ui/Button";
@@ -40,7 +41,27 @@ export const ProjectDetailsPage = () => {
   
   const [selectedStationId, setSelectedStationId] = useState<number | null>(null);
   const [selectedRunId, setSelectedRunId] = useState<number | null>(null);
-  
+  const [showVolumeModal, setShowVolumeModal] = useState(false);
+  const [volumeResult, setVolumeResult] = useState<any>(null);
+  const [calcForm, setCalcForm] = useState({ initialId: "", finalId: "" });
+
+  const calculateVolumeMut = useMutation({
+    mutationFn: (data: {initialId: number, finalId: number}) => 
+      calculateVolume(data.initialId, data.finalId),
+    onSuccess: (data) => {
+      setVolumeResult(data);
+    },
+    onError: (err) => alert("Error calculando: " + err)
+  });
+
+  const handleCalculate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if(!calcForm.initialId || !calcForm.finalId) return alert("Selecciona ambas superficies");
+    calculateVolumeMut.mutate({
+      initialId: Number(calcForm.initialId),
+      finalId: Number(calcForm.finalId)
+    });
+  };
   // Formularios
   const [formPoint, setFormPoint] = useState({ name: "", x: "", y: "", z: "", code: "", isFixed: false });
   const [formStation, setFormStation] = useState({ occupiedPointId: "", instrumentId: "", heightInstrument: "", backsightAngle: 0 });
@@ -301,6 +322,64 @@ export const ProjectDetailsPage = () => {
            </div>
         </div>
       )}
+      {/* MODAL CÁLCULO VOLUMEN */}
+      <Modal isOpen={showVolumeModal} onClose={() => { setShowVolumeModal(false); setVolumeResult(null); }} title="Cubicación de Tierras">
+        {!volumeResult ? (
+          <form onSubmit={handleCalculate} className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Superficie Inicial (Base)</label>
+              <select className="w-full p-2 border rounded" value={calcForm.initialId} onChange={e => setCalcForm({...calcForm, initialId: e.target.value})}>
+                <option value="">-- Seleccionar --</option>
+                {surfaces?.filter((s: any) => s.type === 'INITIAL').map((s: any) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Superficie Final (Proyecto)</label>
+              <select className="w-full p-2 border rounded" value={calcForm.finalId} onChange={e => setCalcForm({...calcForm, finalId: e.target.value})}>
+                <option value="">-- Seleccionar --</option>
+                {surfaces?.filter((s: any) => s.type === 'FINAL').map((s: any) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="pt-4 flex justify-end">
+              <Button type="submit" disabled={calculateVolumeMut.isPending}>
+                {calculateVolumeMut.isPending ? "Calculando..." : "Calcular Diferencia"}
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <div className="space-y-4 text-center">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-red-50 rounded-xl border border-red-100">
+                <p className="text-xs text-red-600 uppercase font-bold">Corte (Excavación)</p>
+                <p className="text-2xl font-mono text-red-700">{volumeResult.cut.toFixed(2)} m³</p>
+              </div>
+              <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                <p className="text-xs text-blue-600 uppercase font-bold">Relleno (Terraplén)</p>
+                <p className="text-2xl font-mono text-blue-700">{volumeResult.fill.toFixed(2)} m³</p>
+              </div>
+            </div>
+            
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <p className="text-sm text-slate-500">Balance Neto</p>
+              <p className={`text-xl font-bold ${volumeResult.net < 0 ? 'text-red-600' : 'text-blue-600'}`}>
+                {Math.abs(volumeResult.net).toFixed(2)} m³
+                <span className="block text-xs font-normal text-slate-400">
+                  {volumeResult.net < 0 ? "(Sobra tierra / Retirar)" : "(Falta tierra / Comprar)"}
+                </span>
+              </p>
+              <p className="text-xs text-slate-400 mt-2">Área calculada: {volumeResult.areaCovered} m²</p>
+            </div>
+
+            <Button onClick={() => setVolumeResult(null)} variant="secondary" className="w-full">
+              Nuevo Cálculo
+            </Button>
+          </div>
+        )}
+      </Modal>
 
       {/* MODALES */}
       <Modal isOpen={modalPointOpen} onClose={() => setModalPointOpen(false)} title="Punto"><form onSubmit={handleCreatePoint} className="space-y-4"><Input label="Nombre" value={formPoint.name} onChange={e=>setFormPoint({...formPoint, name:e.target.value})} required/><div className="grid grid-cols-3 gap-2"><Input label="X" value={formPoint.x} onChange={e=>setFormPoint({...formPoint, x:e.target.value})}/><Input label="Y" value={formPoint.y} onChange={e=>setFormPoint({...formPoint, y:e.target.value})}/><Input label="Z" value={formPoint.z} onChange={e=>setFormPoint({...formPoint, z:e.target.value})}/></div><Button type="submit">Guardar</Button></form></Modal>

@@ -1,7 +1,8 @@
+// src/components/Layout/MainLayout.tsx
 import React from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
 import { 
-  FiMap, FiLayers, FiDatabase, FiSettings, FiLogOut, FiMenu 
+  FiMap, FiLayers, FiDatabase, FiSettings, FiLogOut, FiMenu, FiCpu 
 } from "react-icons/fi";
 import { BiWorld } from "react-icons/bi";
 
@@ -38,16 +39,19 @@ export const MainLayout = () => {
 
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           <div className="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            Principal
+            Gestión
           </div>
-          <SidebarItem to="/" icon={FiDatabase} label="Proyectos" active={location.pathname === "/"} />
+          <SidebarItem to="/" icon={FiDatabase} label="Mis Proyectos" active={location.pathname === "/"} />
           <SidebarItem to="/instruments" icon={FiSettings} label="Instrumentos" active={location.pathname.includes("instruments")} />
-          <SidebarItem to="/project/:id" icon={FiDatabase} label="Detalle Proyecto" active={location.pathname.includes("project/")} />
+          
           <div className="mt-6 px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            Herramientas
+            Utilidades
           </div>
-          <SidebarItem to="/calculator" icon={FiLayers} label="Calculadora" active={location.pathname.includes("calculator")} />
-          <SidebarItem to="/map-viewer" icon={FiMap} label="Visor CAD" active={location.pathname.includes("map-viewer")} />
+          {/* Calculadora puede ser una página simple o un modal futuro */}
+          <SidebarItem to="/calculator" icon={FiCpu} label="Calculadora Geodésica" active={location.pathname.includes("calculator")} />
+          
+          {/* El Visor CAD no suele ir en el sidebar porque depende de un proyecto, 
+              pero puedes poner un acceso directo al último proyecto si quisieras */}
         </nav>
 
         <div className="p-4 border-t border-border">
@@ -60,13 +64,11 @@ export const MainLayout = () => {
 
       {/* Contenido Principal */}
       <main className="flex-1 flex flex-col h-full overflow-hidden relative">
-        {/* Header Móvil (Solo visible en pantallas chicas) */}
         <header className="h-16 bg-surface border-b border-border flex items-center px-6 justify-between md:hidden">
            <span className="font-bold text-text-main">TopoSystem</span>
            <button className="p-2 text-text-muted"><FiMenu size={24} /></button>
         </header>
 
-        {/* Área Scrollable */}
         <div className="flex-1 overflow-auto p-6 md:p-8">
           <div className="max-w-7xl mx-auto w-full animate-fade-in">
             <Outlet />
